@@ -71,6 +71,12 @@ function Icon({ name, className = "size-5" }) {
         <path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3" />
       </>
     ),
+    edit: (
+      <>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </>
+    ),
     logout: (
       <>
         <path d="M10 17l5-5-5-5m5 5H3" />
@@ -152,16 +158,72 @@ function SectionHeading({ title, description, action }) {
   );
 }
 
-function AddRecordModal({ type, onClose, onSave }) {
-  const [name, setName] = useState("");
-  const [detail, setDetail] = useState("");
+function AddRecordModal({
+  type,
+  onClose,
+  onSave,
+  record = null,
+  doctors = [],
+  defaultDoctorId = "",
+}) {
   const isDoctor = type === "doctor";
+  const isEditing = Boolean(record?._id);
+  const [values, setValues] = useState(() => ({
+    name: record?.name ?? "",
+    email: record?.email ?? "",
+    phone: record?.phone ?? "",
+    specialization: record?.specialization ?? "",
+    hospital: record?.hospital ?? "",
+    condition: record?.condition ?? "",
+    age: record?.age ?? "",
+    gender: record?.gender ?? "",
+    address: record?.address ?? "",
+    notes: record?.notes ?? "",
+    doctorId: record?.doctor?._id ?? defaultDoctorId,
+  }));
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  function submit(event) {
+  function updateField(event) {
+    setValues((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  }
+
+  async function submit(event) {
     event.preventDefault();
-    if (!name.trim() || !detail.trim()) return;
-    onSave({ name: name.trim(), detail: detail.trim() });
-    onClose();
+    setError("");
+    setSaving(true);
+
+    const payload = isDoctor
+      ? {
+          name: values.name.trim(),
+          specialization: values.specialization.trim(),
+          hospital: values.hospital.trim(),
+          phone: values.phone.trim(),
+          email: values.email.trim(),
+        }
+      : {
+          name: values.name.trim(),
+          email: values.email.trim(),
+          phone: values.phone.trim(),
+          age: Number(values.age),
+          gender: values.gender,
+          condition: values.condition.trim(),
+          address: values.address.trim(),
+          notes: values.notes.trim(),
+          ...(isEditing ? {} : { doctorId: values.doctorId }),
+        };
+
+    try {
+      await onSave(payload);
+      onClose();
+    } catch (saveError) {
+      setError(saveError.message || "The record could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -178,10 +240,10 @@ function AddRecordModal({ type, onClose, onSave }) {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs font-semibold tracking-widest text-teal-700 uppercase">
-              New record
+              {isEditing ? "Edit record" : "New record"}
             </p>
             <h2 className="mt-1 text-xl font-semibold text-slate-900">
-              Add {isDoctor ? "a doctor" : "a patient"}
+              {isEditing ? "Edit" : "Add"} {isDoctor ? "doctor" : "patient"}
             </h2>
           </div>
           <button
@@ -193,31 +255,87 @@ function AddRecordModal({ type, onClose, onSave }) {
             <Icon name="close" />
           </button>
         </div>
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium text-slate-700">
             {isDoctor ? "Doctor name" : "Patient name"}
             <input
               autoFocus
               required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
+              name="name"
+              value={values.name}
+              onChange={updateField}
               placeholder={isDoctor ? "Dr. Alex Rivera" : "Patient full name"}
               className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
             />
           </label>
-          <label className="block text-sm font-medium text-slate-700">
-            {isDoctor ? "Specialty" : "Condition"}
-            <input
-              required
-              value={detail}
-              onChange={(event) => setDetail(event.target.value)}
-              placeholder={
-                isDoctor ? "e.g. Cardiology" : "e.g. Seasonal allergy"
-              }
-              className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
-            />
-          </label>
+          {isDoctor ? (
+            <>
+              <label className="block text-sm font-medium text-slate-700">
+                Specialty
+                <input required name="specialization" value={values.specialization} onChange={updateField} placeholder="e.g. Cardiology" className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Hospital or clinic
+                <input required name="hospital" value={values.hospital} onChange={updateField} placeholder="Practice name" className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Phone
+                <input required name="phone" value={values.phone} onChange={updateField} maxLength={20} placeholder="Phone number" className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Email
+                <input required type="email" name="email" value={values.email} onChange={updateField} maxLength={254} placeholder="doctor@clinic.com" className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+            </>
+          ) : (
+            <>
+              <label className="block text-sm font-medium text-slate-700">
+                Condition
+                <input required name="condition" value={values.condition} onChange={updateField} maxLength={150} placeholder="e.g. Seasonal allergy" className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Phone
+                <input required name="phone" value={values.phone} onChange={updateField} maxLength={20} placeholder="Phone number" className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Email <span className="font-normal text-slate-400">(optional)</span>
+                <input type="email" name="email" value={values.email} onChange={updateField} maxLength={254} placeholder="patient@email.com" className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Age
+                <input required type="number" name="age" value={values.age} onChange={updateField} min="0" max="120" className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Gender
+                <select required name="gender" value={values.gender} onChange={updateField} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10">
+                  <option value="">Select gender</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              {!isEditing && (
+                <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
+                  Assign to doctor
+                  <select required name="doctorId" value={values.doctorId} onChange={updateField} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10">
+                    <option value="">Select a doctor</option>
+                    {doctors.map((doctor) => <option key={doctor._id} value={doctor._id}>{doctor.name} · {doctor.specialization}</option>)}
+                  </select>
+                  {doctors.length === 0 && <span className="mt-1 block text-xs text-amber-700">Add a doctor before creating an assigned patient record.</span>}
+                </label>
+              )}
+              <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
+                Address <span className="font-normal text-slate-400">(optional)</span>
+                <input name="address" value={values.address} onChange={updateField} maxLength={300} className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
+                Notes <span className="font-normal text-slate-400">(optional)</span>
+                <textarea name="notes" value={values.notes} onChange={updateField} maxLength={2000} rows={3} className="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-normal outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
+            </>
+          )}
         </div>
+        {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         <div className="mt-7 flex justify-end gap-3">
           <button
             type="button"
@@ -228,9 +346,10 @@ function AddRecordModal({ type, onClose, onSave }) {
           </button>
           <button
             type="submit"
-            className="h-10 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800"
+            disabled={saving || (!isDoctor && !isEditing && doctors.length === 0)}
+            className="h-10 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save record
+            {saving ? "Saving..." : isEditing ? "Save changes" : "Save record"}
           </button>
         </div>
       </form>
@@ -275,7 +394,9 @@ function FilterSelect({ value, onChange, children, label }) {
   );
 }
 
-function PatientTable({ patients, compact = false, onDelete }) {
+function PatientTable({ patients, compact = false, onDelete, onEdit, onUnassign }) {
+  const hasActions = Boolean(onDelete || onEdit || onUnassign);
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[680px] text-left">
@@ -285,8 +406,8 @@ function PatientTable({ patients, compact = false, onDelete }) {
             <th className="px-4 py-3.5">Condition</th>
             <th className="px-4 py-3.5">Assigned doctor</th>
             <th className="px-4 py-3.5">Last visit</th>
-            <th className="px-5 py-3.5">Status</th>
-            {onDelete && (
+            <th className="px-5 py-3.5">Gender</th>
+            {hasActions && (
               <th className="px-4 py-3.5">
                 <span className="sr-only">Actions</span>
               </th>
@@ -295,12 +416,12 @@ function PatientTable({ patients, compact = false, onDelete }) {
         </thead>
         <tbody className="divide-y divide-slate-100">
           {patients.map((patient) => (
-            <tr key={patient.name} className="transition hover:bg-slate-50/60">
+            <tr key={patient._id || patient.name} className="transition hover:bg-slate-50/60">
               <td className="whitespace-nowrap px-5 py-3.5 sm:px-6">
                 <div className="flex items-center gap-3">
                   <Avatar
-                    initials={patient.initials}
-                    color={patient.color}
+                    initials={patient.initials || patient.name?.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+                    color={patient.color || "bg-teal-100 text-teal-700"}
                     size="size-9"
                   />
                   <div>
@@ -319,28 +440,47 @@ function PatientTable({ patients, compact = false, onDelete }) {
                 {patient.condition}
               </td>
               <td className="whitespace-nowrap px-4 py-3.5 text-sm text-slate-500">
-                {patient.doctor}
+                {typeof patient.doctor === "object" ? patient.doctor?.name || "Unassigned" : patient.doctor || "Unassigned"}
               </td>
               <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">
-                {patient.date}
+                {patient.createdAt
+                  ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(patient.createdAt))
+                  : patient.date || "—"}
               </td>
-              <td className="whitespace-nowrap px-5 py-3.5">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${patient.status === "Active" ? "bg-emerald-50 text-emerald-700" : patient.status === "Review" ? "bg-amber-50 text-amber-700" : "bg-violet-50 text-violet-700"}`}
-                >
-                  <span className="size-1.5 rounded-full bg-current" />
-                  {patient.status}
-                </span>
+              <td className="whitespace-nowrap px-5 py-3.5 text-xs capitalize text-slate-500">
+                {patient.gender || "—"}
               </td>
-              {onDelete && (
+              {hasActions && (
                 <td className="px-4 py-3.5">
+                  <div className="flex items-center gap-1">
+                    {onUnassign && typeof patient.doctor === "object" && patient.doctor?._id && (
+                      <button
+                        onClick={() => onUnassign(patient)}
+                        aria-label={`Unassign ${patient.name} from ${patient.doctor.name}`}
+                        className="rounded-lg px-2 py-1 text-[10px] font-medium text-amber-700 transition hover:bg-amber-50"
+                      >
+                        Unassign
+                      </button>
+                    )}
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(patient)}
+                        aria-label={`Edit ${patient.name}`}
+                        className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-teal-50 hover:text-teal-700"
+                      >
+                        <Icon name="edit" className="size-4" />
+                      </button>
+                    )}
+                    {onDelete && (
                   <button
-                    onClick={() => onDelete(patient.name)}
+                    onClick={() => onDelete(patient)}
                     aria-label={`Delete ${patient.name}`}
                     className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                   >
                     <Icon name="trash" className="size-4" />
                   </button>
+                    )}
+                  </div>
                 </td>
               )}
             </tr>
@@ -348,7 +488,7 @@ function PatientTable({ patients, compact = false, onDelete }) {
           {patients.length === 0 && (
             <tr>
               <td
-                colSpan={onDelete ? 6 : 5}
+                colSpan={hasActions ? 6 : 5}
                 className="px-6 py-12 text-center text-sm text-slate-500"
               >
                 No patients match your filters.
