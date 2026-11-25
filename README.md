@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Doctor Tracker Frontend
 
-## Getting Started
+Web interface for the Doctor Tracker application. It provides login, protected dashboard views, doctor management, patient management, and dashboard analytics.
 
-First, run the development server:
+## Tech Stack
+
+- Next.js 16 App Router
+- React 19
+- Tailwind CSS 4
+- Browser Fetch API
+
+## Features
+
+- Cookie-based authentication and session checks
+- Protected dashboard layout
+- Doctor listing, creation, editing, deletion, filtering, and pagination
+- Patient listing, editing, deletion, filtering, and pagination
+- Patient assignment and unassignment
+- Dashboard overview cards and charts
+- Guest login and authenticated layouts
+
+## Project Structure
+
+```text
+frontend/
+|-- src/app/
+|   |-- page.js                 # Redirects to login
+|   |-- auth/login/            # Login page
+|   `-- dashboard/
+|       |-- dashboard/         # Dashboard overview
+|       |-- doctors/           # Doctor management
+|       |-- patients/          # Patient management
+|       `-- layout.js          # Protected dashboard layout
+|-- src/components/ui/         # Reusable UI helpers
+|-- src/contexts/AuthContext.js
+|-- src/layouts/               # Guest and protected layouts
+|-- src/services/              # API service modules
+|-- src/shared/                # Header, footer, and sidebar
+|-- src/data/                  # Static fallback data
+|-- public/                    # Static assets
+|-- .env.local                 # Local environment variables
+|-- package.json
+`-- next.config.mjs
+```
+
+## Prerequisites
+
+- Node.js 18 or newer
+- npm
+- The Doctor Tracker backend running
+
+## Environment Variables
+
+Create or update `frontend/.env.local`:
+
+```dotenv
+NEXT_PUBLIC_API_URL=http://localhost:5001/api
+```
+
+`NEXT_PUBLIC_API_URL` is required. API requests include credentials so that authentication cookies are sent and received.
+
+## Installation
+
+```bash
+cd frontend
+npm install
+```
+
+## Running the App
+
+Start the backend first, then run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+The root route redirects to `/auth/login`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Production Build
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set `NEXT_PUBLIC_API_URL` to the deployed backend API URL before building.
