@@ -1,4 +1,4 @@
-const API_URL = process.env.API_URL?.replace(/\/+$/, "");
+const API_URL = "/backend";
 
 export async function apiRequest(endpoint, options = {}) {
   if (!API_URL) {
